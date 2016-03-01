@@ -1,5 +1,5 @@
 {
-  "name": "VectorGauge",
+  "name": "Echarts",
   "version": "1.0.0",
   "description": "Show a gauge meter in Mendix",
   "license": "Apache 2",
@@ -20,7 +20,7 @@
     "semver": "^5.1.0",
     "node-mendix-modeler-path": "https://github.com/JelteMX/node-mendix-modeler-path/archive/v1.0.0.tar.gz"
   },
-  "repository": {"type":"git","url":"http://github.com/iamrob-nl/VectorGauge"},
+  "repository": {"type":"git","url":"http://github.com/iamrob-nl/Echarts"},
   "engines": {
     "node": ">=0.12.0"
   },

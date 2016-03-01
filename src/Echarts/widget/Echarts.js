@@ -1,9 +1,9 @@
 /*global logger, Snap, html, domStyle */
 /*
-    VectorGauge
+    Echarts
     ========================
 
-    @file      : VectorGauge.js
+    @file      : Echarts.js
     @version   : 1.0.0
     @author    : Rob Duits
     @date      : 1/28/2016
@@ -34,16 +34,16 @@ define([
     "dojo/html",
     "dojo/_base/event",
 
-    "VectorGauge/lib/jquery-1.11.2",
-    "VectorGauge/lib/snap.svg",
-    "dojo/text!VectorGauge/widget/template/VectorGauge.html"
-], function(declare, _WidgetBase, _TemplatedMixin, dom, dojoDom, dojoProp, dojoGeometry, dojoClass, dojoStyle, dojoConstruct, dojoArray, dojoLang, dojoText, dojoHtml, dojoEvent, _jQuery, snap, widgetTemplate) {
+    "Echarts/lib/jquery-1.11.2",
+    "Echarts/lib/echarts",
+    "dojo/text!Echarts/widget/template/Echarts.html"
+], function(declare, _WidgetBase, _TemplatedMixin, dom, dojoDom, dojoProp, dojoGeometry, dojoClass, dojoStyle, dojoConstruct, dojoArray, dojoLang, dojoText, dojoHtml, dojoEvent, _jQuery, echarts, widgetTemplate) {
     "use strict";
 
     var $ = _jQuery.noConflict(true);
 
     // Declare widget's prototype.
-    return declare("VectorGauge.widget.VectorGauge", [ _WidgetBase, _TemplatedMixin ], {
+    return declare("Echarts.widget.Echarts", [ _WidgetBase, _TemplatedMixin ], {
         // _TemplatedMixin will create our dom node using this HTML template.
         templateString: widgetTemplate,
 
@@ -51,7 +51,6 @@ define([
         svgGauge: null,
         gaugeArc: null,
         gaugeNeedle: null,
-        _i: 0,
 
         // Internal variables. Non-primitives created in the prototype are shared between all widget instances.
         _handles: null,
@@ -61,7 +60,7 @@ define([
         // dojo.declare.constructor is called to construct the widget instance. Implement to initialize non-primitive properties.
         constructor: function() {
             // Uncomment the following line to enable debug messages
-            logger.level(logger.DEBUG);
+            //logger.level(logger.DEBUG);
             logger.debug(this.id + ".constructor");
             this._handles = [];
         },
@@ -71,6 +70,31 @@ define([
             logger.debug(this.id + ".postCreate");
             //this._updateRendering();
             this._setupEvents();
+        },
+
+        _processData : function () {
+
+        },
+
+        _datasetAdd: function (dataset, datapoints) {
+            logger.debug(this.id + "._datasetAdd");
+            var set = {
+                dataset: dataset,
+                sorting: +(dataset.get(this.datasetsorting))
+            };
+            if (datapoints.length === 1) {
+                set.point = datapoints[0];
+                set.points = datapoints;
+            } else {
+                set.points = datapoints;
+            }
+
+            this._data.datasets.push(set);
+
+            this._datasetCounter--;
+            if (this._datasetCounter === 0) {
+                this._processData();
+            }
         },
 
         // mxui.widget._WidgetBase.update is called when context is changed or initialized. Implement to re-render and / or fetch data.
@@ -104,113 +128,105 @@ define([
         // mxui.widget._WidgetBase.uninitialize is called when the widget is destroyed. Implement to do special tear-down work.
         uninitialize: function() {
           logger.debug(this.id + ".uninitialize");
-            // Clean up listeners, helper objects, etc. There is no need to remove listeners added with this.connect / this.subscribe / this.own.
-
-            logger.debug("need to redraw SVG");
-            this._resetSVG();
-            // this._drawSVG();
+          // Clean up listeners, helper objects, etc. There is no need to remove listeners added with this.connect / this.subscribe / this.own.
         },
 
         // Attach events to HTML dom elements
         _setupEvents: function() {
-            //logger.debug(this.id + "._setupEvents");
+            logger.debug(this.id + "._setupEvents");
         },
 
-        _customColor: function(arcBG, arc, needle) {
-          logger.debug(this.id + "._customColor");
+        _loadData: function () {
+          logger.debug(this.id + "._loadData");
+          this._data = {
+              object: this._mxObj,
+              datasets: []
+          };
 
-          var color = this._contextObj ? this._contextObj.get(this.ColorPrimaryAttr) : "";
+          this._executeMicroflow(this.datasourcemf, dojoLang.hitch(this, function (objs) {
+            var obj = objs[0], // Chart object is always only one.
+              j = null,
+              dataset = null,
+              pointguids = null;
 
-          arcBG.attr({
-            stroke: color,
-            opacity: 0.25
-          });
+            this._data.object = obj;
+            this._data.datasets = [];
 
-          arc.attr({
-            stroke: color
-          });
+            // Retrieve datasets
+            mx.data.get({
+              guids: obj.get(this._dataset),
+              callback: dojoLang.hitch(this, function (datasets) {
+                var set = {};
 
-          needle.select("polygon:nth-child(1)").attr({
-            fill: color,
-            stroke: "rgba(0, 0, 0, .5)"
-          });
-          needle.select("polygon:nth-child(2)").attr({
-            fill: "#000000",
-            opacity: 0.15
-          });
-          needle.select("circle").attr({
-            fill: color,
-            stroke: "rgba(0, 0, 0, .5)"
-          });
-        },
+                this._datasetCounter = datasets.length;
+                this._data.datasets = [];
 
-        _showVariable: function(value, newId) {
-          if(this.showValueAttr === true){
-            // give each value txt a unique id
-            var valueTxt = newId + " #" + this.valueTxt.id;
-            $(valueTxt).attr("id", this.id + "_" + this.valueTxt.id);
-            var valueTxtLabel = Snap.select(" #" + this.valueTxt.id);
+                for (j = 0; j < datasets.length; j++) {
+                    dataset = datasets[j];
+                    pointguids = dataset.get(this._datapoint);
+                    if (typeof pointguids === "string" && pointguids !== "") {
+                        pointguids = [pointguids];
+                    }
+                    if (typeof pointguids !== "string") {
+                        mx.data.get({
+                            guids: pointguids,
+                            callback: dojoLang.hitch(this, this._datasetAdd, dataset)
+                        });
+                    } else {
+                        this._datasetAdd(dataset, []);
+                    }
+                }
 
-            valueTxtLabel.attr({
-              text: value
+              })
             });
-          }
+          }), this._mxObj);
         },
 
-        _drawSVG: function() {
-          logger.debug(this.id + "._drawSVG");
+        _showChart: function() {
+          logger.debug(this.id + "._showChart");
 
-          // Widget configured variables
-          var value = this._contextObj ? this._contextObj.get(this.valueAttr) : "";
+          // Load data again.
+          this._loadData();
 
-          // Variable SVG elements
-          var newId = "#" + this.id;
-          var gaugeArc = newId + " #" + this.gaugeArc.id;
-          var gaugeNeedle = newId + " #" + this.gaugeNeedle.id;
-          var gaugeArcBackground = newId + " #" + this.gaugeArcBackground.id;
+      		// based ready dom, initialization echarts instance
+          var myChart = echarts.init(this.attachChart);
 
-          // give elements a unique id
-          $(gaugeArc).attr("id", this.id + "_" + this.gaugeArc.id);
-          $(gaugeNeedle).attr("id", this.id + "_" + this.gaugeNeedle.id);
-          $(gaugeArcBackground).attr("id", this.id + "_" + this.gaugeArcBackground.id);
+      		// Specify configurations and data graphs
+      		var option = {
+      	    title: {
+      	      text: this.titleAttr,
+      				left: "center"
+      	    },
+      			tooltip: {
+      	      trigger: "item",
+      	      formatter: "{a} <br/>{b} : {c}"
+      	    },
+      	    xAxis: {
+      	      data: ["20-01","24-01","26-01","23-04","20-05","20-06"],
+      				splitLine: {show: false}
+      	    },
+      	    yAxis: {
+      				min: this.yAxisMinValueAttr,
+      				max: this.yAxisMaxValueAttr,
+      				splitLine: {show: false}
+      			},
+      			dataZoom: {
+      		    type: "inside",
+      				startValue: 0,
+      		    start: 0,
+      		    end: 100
+      	    },
+      	    series: [{
+      	      name: "independent",
+      	      type: "line",
+      	      data: [0, 20, 36, 10, 10, 20],
+      	      animationDuration: 1000,
+      				smooth: true
+      	    }]
+      		};
 
-          // show the current variable in the gauge
-          this._showVariable(value, newId);
-
-          // Attach variable to existing SVG and select SVG elements
-          var s = new Snap(newId);
-          var arc = Snap.select("#" + this.gaugeArc.id);
-          var needle = Snap.select("#" + this.gaugeNeedle.id);
-          var arcBG = Snap.select(" #" + this.gaugeArcBackground.id);
-
-          // Color customisations configured within the Widget
-          this._customColor(arcBG, arc, needle);
-
-          // Calculate the arc rotation in % between 0 - 100
-          var arcLength = arc.getTotalLength();
-          var arcString = arc.attr("d");
-          var archValue = (arcLength / 100) * value;
-          var rotationValue = (270 / 100) * value;
-          arc.attr({ d: ""});
-
-          // Animate rotatable elements
-          needle.animate({
-            transform: "r" + rotationValue + ", 160, 160"
-          }, 1000);
-
-          Snap.animate(0, archValue, function (val) {
-            var arcSubPath = Snap.path.getSubpath(arcString, 0, val);
-            arc.attr({
-                d: arcSubPath
-            });
-          }, 1000);
-
-          // Increase this value to make every SVG use unique ID's
-          this.counter.innerHTML = ++this._i;
-        },
-
-        _resetSVG: function () {
-          logger.debug(this.id + "._resetSVG");
+          // Just use the specified configurations and data graphs.
+          myChart.setOption(option);
         },
 
         // Rerender the interface.
@@ -219,7 +235,7 @@ define([
 
             // Draw or reload.
             if (this._contextObj !== null) {
-              this._drawSVG();
+              this._showChart();
             } else {
                 // Hide widget dom node.
                 dojoStyle.set(this.domNode, "display", "none");
@@ -312,10 +328,42 @@ define([
 
                 this._handles = [_objectHandle, _attrHandle, _validationHandle];
             }
+        },
+
+        _executeMicroflow: function (mf, callback, obj) {
+            logger.debug(this.id + "._executeMicroflow");
+            var _params = {
+                applyto: "selection",
+                actionname: mf,
+                guids: []
+            };
+
+            if (obj === null) {
+                obj = this._data.object;
+            }
+
+            if (obj && obj.getGuid()) {
+                _params.guids = [obj.getGuid()];
+            }
+
+            mx.data.action({
+                params: _params,
+                store: {
+                    caller: this.mxform
+                },
+                callback: dojoLang.hitch(this, function (obj) {
+                    if (typeof callback !== "undefined") {
+                        callback(obj);
+                    }
+                }),
+                error: function (error) {
+                    console.log(error.description);
+                }
+            }, this);
         }
     });
 });
 
-require(["VectorGauge/widget/VectorGauge"], function() {
+require(["Echarts/widget/Echarts"], function() {
     "use strict";
 });
