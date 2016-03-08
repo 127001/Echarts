@@ -1,0 +1,65 @@
+<?xml version="1.0" encoding="utf-8" ?>
+<widget id="Echarts.widgets.LineChart.widget.LineChart" needsEntityContext="true" xmlns="http://www.mendix.com/widget/1.0/">
+    <name>Echarts</name>
+    <description>Echarts widget.</description>
+    <icon>iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAYAAAAf8/9hAAAAGXRFWHRTb2Z0d2FyZQBBZG9iZSBJbWFnZVJlYWR5ccllPAAAAVpJREFUeNpi2rRp038GJEAqn4mBQkCSAYeNtQ24dm4B0QIkGwDVtP4/ByeIux/IVyDaAKjm/UDc+N3eGSRUCDUkgAlNYQP/xC4wjWZGPxAvtD17dQGIA6QPAClHIK5nQtIMcpL/5/hUGP8+EDtwb1zDANU0AdlEIP8ByBBkF8wHOfGfgCBIsgFqQz7jj+8gfiI2rwHFPzBBbQsAUh+AAhuQbQDiwC/hsXjDh4Xxxw+YHx3xKTQ+DA4X/4n/ukBsUGICeeEBC+fBPSD5iVA/4dIMCp/4s7ZXFUEp0c/PjxGeDlge3MMIICwAFD5Yw4GluewHg3GFNkjBRSA+wPAeVcEN1msg6gPQ9gNYDYj/nMowkb9rI5BtD7KpU6AR5GRQojkIMvDg3z2whIM9Lwj8E2QAmr4BiAuB2LD8Qz1IvBEqX6//0xgkjzN8WLAJQp0LdnL9pvb/+AIHIMAA60WVM/mWPcoAAAAASUVORK5CYII=</icon>
+
+    <properties>
+      <property key="titleAttr" type="string" required="false" defaultValue="">
+          <caption>Title</caption>
+          <category>Appearance</category>
+          <description>The title for the chart</description>
+      </property>
+
+        <property key="ColorPrimaryAttr" type="attribute" required="false">
+            <caption>Primary Color</caption>
+            <category>Appearance</category>
+            <description>The primary color of the widget.</description>
+            <attributeTypes>
+                <attributeType name="String" />
+            </attributeTypes>
+        </property>
+        <property key="valueAttr" type="attribute" required="true" defaultValue="">
+            <caption>Value</caption>
+            <category>Appearance</category>
+            <description>Current value for the gauge.</description>
+            <attributeTypes>
+                <attributeType name="Integer" />
+            </attributeTypes>
+        </property>
+        <property key="showValueAttr" type="boolean" defaultValue="true">
+    			<caption>Display value</caption>
+    			<category>Appearance</category>
+    			<description>Display the value in the gauge.</description>
+    		</property>
+        <!--<property key="mfToExecute" type="microflow" required="false" defaultValue="">
+            <caption>Microflow</caption>
+            <category>Behavior</category>
+            <description>The microflow to execute on click.</description>
+            <returnType type="Boolean" />
+        </property>-->
+
+        <property key="yAxisMinValueAttr" type="integer" required="true" defaultValue="0">
+            <caption>Min</caption>
+            <category>Y Axis</category>
+            <description>The min value for the y axis</description>
+        </property>
+        <property key="yAxisMaxValueAttr" type="integer" required="true" defaultValue="100">
+            <caption>Max</caption>
+            <category>Y Axis</category>
+            <description>The max value for the y axis</description>
+        </property>
+
+        <property key="sourceentity" type="entity" required="true" allowNonPersistableEntities="true">
+          <caption>Chart Entity</caption>
+          <category>Data Source</category>
+          <description>Container entity, referencing DataSet entity objects.</description>
+        </property>
+        <property key="datasourcemf" type="microflow" required="false">
+          <caption>Microflow</caption>
+          <category>Data Source</category>
+          <description>Microflow returning a 'Chart Entity' object.</description>
+          <returnType type="Object" entityProperty="sourceentity"></returnType>
+        </property>
+    </properties>
+</widget>
